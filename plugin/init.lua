@@ -5,6 +5,35 @@ local cpu = require("wezmuxbar.cpu")
 
 local M = {}
 
+--- Checks if the user is on windows
+local is_windows = string.match(wezterm.target_triple, "windows") ~= nil
+local separator = is_windows and "\\" or "/"
+
+local plugin_dir = wezterm.plugin.list()[1].plugin_dir:gsub(separator .. "[^" .. separator .. "]*$", "")
+
+--- Checks if the plugin directory exists
+local function directory_exists(path)
+	local success, result = pcall(wezterm.read_dir, plugin_dir .. path)
+	return success and result
+end
+
+--- Returns the name of the package, used when requiring modules
+local function get_require_path()
+	local path1 = "httpssCssZssZsgithubsDscomsZsabelfubusZswezmuxbar"
+	local path2 = "httpssCssZssZsgithubsDscomsZsabelfubusZswezmuxbarZs"
+	return directory_exists(path2) and path2 or path1
+end
+
+package.path = package.path
+	.. ";"
+	.. plugin_dir
+	.. separator
+	.. get_require_path()
+	.. separator
+	.. "plugin"
+	.. separator
+	.. "?.lua"
+
 local default_options = {
 	tab_bar_position = "bottom", -- "top" | "bottom"
 	tab_max_width = 36, -- number,
