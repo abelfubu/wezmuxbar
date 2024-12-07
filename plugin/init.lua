@@ -1,3 +1,5 @@
+local wezterm = require("wezterm")
+
 local M = {}
 
 --- Checks if the user is on windows
@@ -36,7 +38,6 @@ local default_options = {
 }
 
 function M.add_mux_bar(config, options)
-	local wezterm = require("wezterm")
 	local utils = require("wezmuxbar.utils")
 	local components = require("wezmuxbar.components")
 	local cpu = require("wezmuxbar.cpu")
