@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 local utils = require("wezmuxbar.utils")
 local components = require("wezmuxbar.components")
+local cpu = require("wezmuxbar.cpu")
 
 local M = {}
 
@@ -52,21 +53,30 @@ function M.add_mux_bar(config, options)
 			icon = leader_active and "   " or "   ",
 		})))
 
-		window:set_right_status(wezterm.format(components.right_widget({
-			text = wezterm.strftime("%Y-%m-%d"),
-			fg = colors.brights[4],
-			bg = colors.background,
-		})))
+		local right_elements = {}
 
-		local cpu = require("wezmuxbar.cpu")
+		table.insert(
+			right_elements,
+			components.right_widget({
+				text = wezterm.strftime("%Y-%m-%d"),
+				fg = colors.brights[4],
+				bg = colors.background,
+			})
+		)
+
 		local cpu_status = cpu.update(window, { throttle = cpu.default_opts.throttle })
 
-		window:set_right_status(wezterm.format(components.right_widget({
-			text = cpu_status,
-			fg = colors.brights[5],
-			bg = colors.background,
-			icon = cpu.default_opts.icon,
-		})))
+		table.insert(
+			right_elements,
+			components.right_widget({
+				text = cpu_status,
+				fg = colors.brights[5],
+				bg = colors.background,
+				icon = cpu.default_opts.icon,
+			})
+		)
+
+		window:set_right_status(wezterm.format(right_elements))
 	end)
 
 	wezterm.on("format-tab-title", function(tab)
