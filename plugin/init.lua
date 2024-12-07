@@ -95,7 +95,7 @@ function M.add_mux_bar(config, options)
 			table.insert(right_elements, value)
 		end
 
-		local cpu_status = cpu.update(window, { throttle = cpu.default_opts.throttle })
+		local cpu_status = cpu.update(window, { throttle = 3 })
 
 		for _, value in
 			ipairs(components.right_widget({

@@ -16,9 +16,7 @@ return {
 		local success, result
 		if string.match(wezterm.target_triple, "windows") ~= nil then
 			success, result = wezterm.run_child_process({
-				"cmd.exe",
-				"/C",
-				"wmic cpu get loadpercentage",
+				"(Get-Counter 'Processor(_Total)% Processor Time').CounterSamples[0].CookedValue",
 			})
 		elseif string.match(wezterm.target_triple, "linux") ~= nil then
 			success, result = wezterm.run_child_process({
