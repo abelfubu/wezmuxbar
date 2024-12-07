@@ -18,7 +18,7 @@ function M.right_widget(config)
 		{ Text = wezterm.nerdfonts.ple_left_half_circle_thick },
 		{ Background = { Color = config.fg } },
 		{ Foreground = { Color = config.bg } },
-		{ Text = wezterm.nerdfonts.md_calendar_outline .. " " },
+		{ Text = config.icon .. " " },
 		{ Background = { Color = config.bg } },
 		{ Foreground = { Color = config.fg } },
 		{ Text = " " .. config.text .. " " },

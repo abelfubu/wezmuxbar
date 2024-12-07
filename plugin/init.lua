@@ -66,7 +66,6 @@ function M.add_mux_bar(config, options)
 	config.tab_max_width = merged_options.tab_max_width
 	config.show_tab_index_in_tab_bar = false
 	config.show_new_tab_button_in_tab_bar = false
-	-- config.show_close_tab_button_in_tabs = false
 
 	config.colors = {
 		tab_bar = {
@@ -85,26 +84,29 @@ function M.add_mux_bar(config, options)
 
 		local right_elements = {}
 
-		table.insert(
-			right_elements,
-			components.right_widget({
+		for _, value in
+			ipairs(components.right_widget({
 				text = wezterm.strftime("%Y-%m-%d"),
 				fg = colors.brights[4],
 				bg = colors.background,
-			})
-		)
+				icon = wezterm.nerdfonts.md_calendar_outline,
+			}))
+		do
+			table.insert(right_elements, value)
+		end
 
 		local cpu_status = cpu.update(window, { throttle = cpu.default_opts.throttle })
 
-		table.insert(
-			right_elements,
-			components.right_widget({
+		for _, value in
+			ipairs(components.right_widget({
 				text = cpu_status,
 				fg = colors.brights[5],
 				bg = colors.background,
 				icon = cpu.default_opts.icon,
-			})
-		)
+			}))
+		do
+			table.insert(right_elements, value)
+		end
 
 		window:set_right_status(wezterm.format(right_elements))
 	end)
