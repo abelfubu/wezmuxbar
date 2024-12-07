@@ -12,7 +12,7 @@ local M = {}
 --- Create a date widget.
 --- @param config TabConfig Leader status configuration
 --- @return table[] Formatted leader status widget elements
-function M.date(config)
+function M.right_widget(config)
 	return {
 		{ Foreground = { Color = config.fg } },
 		{ Text = wezterm.nerdfonts.ple_left_half_circle_thick },

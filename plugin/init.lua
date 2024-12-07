@@ -52,10 +52,20 @@ function M.add_mux_bar(config, options)
 			icon = leader_active and "   " or "   ",
 		})))
 
-		window:set_right_status(wezterm.format(components.date({
+		window:set_right_status(wezterm.format(components.right_widget({
 			text = wezterm.strftime("%Y-%m-%d"),
 			fg = colors.brights[4],
 			bg = colors.background,
+		})))
+
+		local cpu = require("wezmuxbar.cpu")
+		local cpu_status = cpu.update(window, { throttle = cpu.default_opts.throttle })
+
+		window:set_right_status(wezterm.format(components.right_widget({
+			text = cpu_status,
+			fg = colors.brights[5],
+			bg = colors.background,
+			icon = cpu.default_opts.icon,
 		})))
 	end)
 
