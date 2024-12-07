@@ -1,8 +1,3 @@
-local wezterm = require("wezterm")
-local utils = require("wezmuxbar.utils")
-local components = require("wezmuxbar.components")
-local cpu = require("wezmuxbar.cpu")
-
 local M = {}
 
 --- Checks if the user is on windows
@@ -41,6 +36,11 @@ local default_options = {
 }
 
 function M.add_mux_bar(config, options)
+	local wezterm = require("wezterm")
+	local utils = require("wezmuxbar.utils")
+	local components = require("wezmuxbar.components")
+	local cpu = require("wezmuxbar.cpu")
+
 	local colors = wezterm.color.get_builtin_schemes()["catppuccin-mocha"]
 
 	for key, value in pairs(wezterm.color.get_builtin_schemes()) do
