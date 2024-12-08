@@ -86,21 +86,41 @@ function M.add_mux_bar(config, options)
 
 		for _, value in
 			ipairs(components.right_widget({
-				text = wezterm.strftime("%Y-%m-%d"),
-				fg = colors.brights[4],
+				text = cpu.update(window, { throttle = 3 }),
+				fg = colors.brights[5],
 				bg = colors.background,
-				icon = wezterm.nerdfonts.md_calendar_outline,
+				icon = cpu.default_opts.icon,
 			}))
 		do
 			table.insert(right_elements, value)
 		end
 
+		local valid, url = pcall(function()
+			return pane:get_current_working_dir()
+		end)
+
+		if valid and url.scheme == "file" then
+			local clean_path = url.file_path:gsub("^/", ""):gsub("[/\\]+$", "")
+			local last_portion = string.match(clean_path, "[^/\\]+$") or "Unknown"
+
+			for _, value in
+				ipairs(components.right_widget({
+					text = last_portion,
+					fg = colors.brights[6],
+					bg = colors.background,
+					icon = wezterm.nerdfonts.custom_folder_oct,
+				}))
+			do
+				table.insert(right_elements, value)
+			end
+		end
+
 		for _, value in
 			ipairs(components.right_widget({
-				text = cpu.update(window, { throttle = 3 }),
-				fg = colors.brights[5],
+				text = wezterm.strftime("%Y-%m-%d"),
+				fg = colors.brights[4],
 				bg = colors.background,
-				icon = cpu.default_opts.icon,
+				icon = wezterm.nerdfonts.md_calendar_outline,
 			}))
 		do
 			table.insert(right_elements, value)
