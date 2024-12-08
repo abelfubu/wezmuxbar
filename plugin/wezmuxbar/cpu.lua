@@ -16,7 +16,10 @@ return {
 		local success, result
 		if string.match(wezterm.target_triple, "windows") ~= nil then
 			success, result = wezterm.run_child_process({
-				"(Get-Counter 'Processor(_Total)% Processor Time').CounterSamples[0].CookedValue",
+				"powershell",
+				"-NoProfile",
+				"-Command",
+				"(Get-Counter '\\Processor(_Total)\\% Processor Time').CounterSamples.CookedValue",
 			})
 		elseif string.match(wezterm.target_triple, "linux") ~= nil then
 			success, result = wezterm.run_child_process({
@@ -38,7 +41,7 @@ return {
 
 		local cpu
 		if string.match(wezterm.target_triple, "windows") ~= nil then
-			cpu = result:match("%d+")
+			cpu = string.match(result, "%d+%.?%d*")
 		else
 			cpu = result:gsub("^%s*(.-)%s*$", "%1")
 		end

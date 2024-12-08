@@ -40,6 +40,7 @@ local default_options = {
 function M.add_mux_bar(config, options)
 	local utils = require("wezmuxbar.utils")
 	local components = require("wezmuxbar.components")
+	local cpu = require("wezmuxbar.cpu")
 
 	local colors = wezterm.color.get_builtin_schemes()["catppuccin-mocha"]
 
@@ -89,6 +90,17 @@ function M.add_mux_bar(config, options)
 				fg = colors.brights[4],
 				bg = colors.background,
 				icon = wezterm.nerdfonts.md_calendar_outline,
+			}))
+		do
+			table.insert(right_elements, value)
+		end
+
+		for _, value in
+			ipairs(components.right_widget({
+				text = cpu.update(window, { throttle = 3 }),
+				fg = colors.brights[5],
+				bg = colors.background,
+				icon = cpu.default_opts.icon,
 			}))
 		do
 			table.insert(right_elements, value)
