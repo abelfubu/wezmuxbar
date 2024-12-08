@@ -21,6 +21,4 @@ wezterm.plugin.require("https://github.com/abelfubu/wezmuxbar").add_mux_bar(conf
 return config
 ```
 
-## Customization
-
-WIP
+![CATPPUCCIN](https://raw.githubusercontent.com/abelfubu/wezmuxbar/main/images/catppuccin.png)
