@@ -73,7 +73,7 @@ function M.add_mux_bar(config, options)
 		},
 	}
 
-	wezterm.on("update-right-status", function(window)
+	wezterm.on("update-right-status", function(window, pane)
 		local leader_active = window:leader_is_active()
 
 		window:set_left_status(wezterm.format(components.leader_status({
@@ -95,24 +95,15 @@ function M.add_mux_bar(config, options)
 			table.insert(right_elements, value)
 		end
 
-		local valid, url = pcall(function()
-			return pane:get_current_working_dir()
-		end)
-
-		if valid and url.scheme == "file" then
-			local clean_path = url.file_path:gsub("^/", ""):gsub("[/\\]+$", "")
-			local last_portion = string.match(clean_path, "[^/\\]+$") or "Unknown"
-
-			for _, value in
-				ipairs(components.right_widget({
-					text = last_portion,
-					fg = colors.brights[6],
-					bg = colors.background,
-					icon = wezterm.nerdfonts.custom_folder_oct,
-				}))
-			do
-				table.insert(right_elements, value)
-			end
+		for _, value in
+			ipairs(components.right_widget({
+				text = utils.get_current_dir(pane),
+				fg = colors.brights[7],
+				bg = colors.background,
+				icon = wezterm.nerdfonts.custom_folder_oct,
+			}))
+		do
+			table.insert(right_elements, value)
 		end
 
 		for _, value in

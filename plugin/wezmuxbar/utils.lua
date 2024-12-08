@@ -30,4 +30,18 @@ function M.parse_tab_title(tab_info)
 	return tab_info.active_pane.title
 end
 
+function M.get_current_dir(pane)
+	local valid, url = pcall(function()
+		return pane:get_current_working_dir()
+	end)
+
+	if not valid or url.scheme ~= "file" then
+		return ""
+	end
+
+	local clean_path = url.file_path:gsub("^/", ""):gsub("[/\\]+$", "")
+	local last_portion = string.match(clean_path, "[^/\\]+$") or "Unknown"
+	return last_portion
+end
+
 return M
