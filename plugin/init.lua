@@ -130,7 +130,7 @@ function M.add_mux_bar(config, options)
 		return components.inactive_tab({
 			text = title,
 			index = tab.tab_index,
-			fg = colors.brights[4],
+			fg = colors.brights[1],
 			bg = colors.background,
 		})
 	end)
