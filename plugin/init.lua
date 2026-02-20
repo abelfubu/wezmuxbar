@@ -41,6 +41,7 @@ function M.add_mux_bar(config, options)
 	local utils = require("wezmuxbar.utils")
 	local components = require("wezmuxbar.components")
 	local cpu = require("wezmuxbar.cpu")
+	local aerospace = require("wezmuxbar.aerospace")
 
 	local colors = wezterm.color.get_builtin_schemes()[config.color_scheme]
 
@@ -86,6 +87,17 @@ function M.add_mux_bar(config, options)
 
 		for _, value in
 			ipairs(components.right_widget({
+				text = aerospace.get_workspaces(),
+				fg = colors.brights[6],
+				bg = colors.background,
+				icon = aerospace.default_opts.icon,
+			}))
+		do
+			table.insert(right_elements, value)
+		end
+
+		for _, value in
+			ipairs(components.right_widget({
 				text = cpu.update(window, { throttle = 3 }),
 				fg = colors.brights[5],
 				bg = colors.background,
@@ -112,6 +124,17 @@ function M.add_mux_bar(config, options)
 				fg = colors.brights[4],
 				bg = colors.background,
 				icon = wezterm.nerdfonts.md_calendar_outline,
+			}))
+		do
+			table.insert(right_elements, value)
+		end
+
+		for _, value in
+			ipairs(components.right_widget({
+				text = wezterm.strftime("%H:%M"),
+				fg = colors.brights[3],
+				bg = colors.background,
+				icon = wezterm.nerdfonts.md_clock_outline,
 			}))
 		do
 			table.insert(right_elements, value)
