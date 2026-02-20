@@ -35,7 +35,7 @@ function M.get_current_dir(pane)
 		return pane:get_current_working_dir()
 	end)
 
-	if not valid or url.scheme ~= "file" then
+	if not valid or not url or url.scheme ~= "file" then
 		return ""
 	end
 
