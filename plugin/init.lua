@@ -124,7 +124,7 @@ function M.add_mux_bar(config, options)
 		local title = utils.parse_tab_title(tab)
 
 		if tab.is_active then
-			return components.active_tab({ text = title, fg = colors.brights[7], bg = colors.background })
+			return components.active_tab({ text = title, fg = colors.brights[8], bg = colors.background })
 		end
 
 		return components.inactive_tab({
