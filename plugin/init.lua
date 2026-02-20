@@ -42,7 +42,7 @@ function M.add_mux_bar(config, options)
 	local components = require("wezmuxbar.components")
 	local cpu = require("wezmuxbar.cpu")
 
-	local colors = wezterm.color.get_builtin_schemes()["catppuccin-mocha"]
+	local colors = wezterm.color.get_builtin_schemes()[config.color_scheme]
 
 	for key, value in pairs(wezterm.color.get_builtin_schemes()) do
 		local valid_keys = {
