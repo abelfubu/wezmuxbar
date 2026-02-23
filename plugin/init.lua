@@ -85,16 +85,16 @@ function M.add_mux_bar(config, options)
 
 		local right_elements = {}
 
-		for _, value in
-			ipairs(components.right_widget({
-				text = aerospace.get_workspaces(),
-				fg = colors.brights[6],
-				bg = colors.background,
-				icon = aerospace.default_opts.icon,
-			}))
-		do
-			table.insert(right_elements, value)
-		end
+		-- for _, value in
+		-- 	ipairs(components.right_widget({
+		-- 		text = aerospace.get_workspaces(),
+		-- 		fg = colors.brights[6],
+		-- 		bg = colors.background,
+		-- 		icon = aerospace.default_opts.icon,
+		-- 	}))
+		-- do
+		-- 	table.insert(right_elements, value)
+		-- end
 
 		for _, value in
 			ipairs(components.right_widget({
