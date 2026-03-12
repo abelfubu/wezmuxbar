@@ -146,9 +146,9 @@ function M.add_mux_bar(config, options)
 	wezterm.on("format-tab-title", function(tab)
 		local title = utils.parse_tab_title(tab)
 
-		if tab.is_active then
-			return components.active_tab({ text = title, fg = colors.brights[2], bg = colors.background })
-		end
+        if tab.is_active then
+            return components.active_tab({ text = title, index = tab.tab_index, fg = colors.brights[2], bg = colors.background })
+        end
 
 		return components.inactive_tab({
 			text = title,
