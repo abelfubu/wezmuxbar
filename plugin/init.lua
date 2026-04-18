@@ -30,6 +30,16 @@ package.path = package.path
 	.. "plugin"
 	.. separator
 	.. "?.lua"
+	.. ";"
+	.. plugin_dir
+	.. separator
+	.. get_require_path()
+	.. separator
+	.. "plugin"
+	.. separator
+	.. "?"
+	.. separator
+	.. "init.lua"
 
 local default_options = {
 	tab_bar_position = "bottom", -- "top" | "bottom"
@@ -38,6 +48,14 @@ local default_options = {
 	date = true, -- boolean
 	time = true, -- boolean
 }
+
+--- Sets up the workspace switcher with fzf.
+--- @param config table Wezterm config object
+--- @param opts table|nil Optional overrides { key = "s", mods = "LEADER" }
+function M.setup_switcher(config, opts)
+	local switcher = require("wezmuxbar.switcher")
+	switcher.setup(config, opts)
+end
 
 function M.add_mux_bar(config, options)
 	local utils = require("wezmuxbar.utils")
