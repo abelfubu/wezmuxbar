@@ -35,6 +35,8 @@ local default_options = {
 	tab_bar_position = "bottom", -- "top" | "bottom"
 	tab_max_width = 36, -- number,
 	style = "round", -- "round" | "default"
+	date = true, -- boolean
+	time = true, -- boolean
 }
 
 function M.add_mux_bar(config, options)
@@ -118,26 +120,30 @@ function M.add_mux_bar(config, options)
 			table.insert(right_elements, value)
 		end
 
-		for _, value in
-			ipairs(components.right_widget({
-				text = wezterm.strftime("%Y-%m-%d"),
-				fg = colors.brights[4],
-				bg = colors.background,
-				icon = wezterm.nerdfonts.md_calendar_outline,
-			}))
-		do
-			table.insert(right_elements, value)
+		if merged_options.date then
+			for _, value in
+				ipairs(components.right_widget({
+					text = wezterm.strftime("%Y-%m-%d"),
+					fg = colors.brights[4],
+					bg = colors.background,
+					icon = wezterm.nerdfonts.md_calendar_outline,
+				}))
+			do
+				table.insert(right_elements, value)
+			end
 		end
 
-		for _, value in
-			ipairs(components.right_widget({
-				text = wezterm.strftime("%H:%M"),
-				fg = colors.brights[3],
-				bg = colors.background,
-				icon = wezterm.nerdfonts.md_clock_outline,
-			}))
-		do
-			table.insert(right_elements, value)
+		if merged_options.time then
+			for _, value in
+				ipairs(components.right_widget({
+					text = wezterm.strftime("%H:%M"),
+					fg = colors.brights[3],
+					bg = colors.background,
+					icon = wezterm.nerdfonts.md_clock_outline,
+				}))
+			do
+				table.insert(right_elements, value)
+			end
 		end
 
 		window:set_right_status(wezterm.format(right_elements))
