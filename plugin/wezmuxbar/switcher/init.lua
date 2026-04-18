@@ -66,21 +66,21 @@ local function build_fzf_args(ws_file)
 	-- MQ== is base64 for "1" — hardcoded to avoid platform-specific base64 commands
 	local signal = "\\033]1337;SetUserVar=wezmuxbar_switcher=MQ==\\007"
 
-	if is_windows then
-		local esc = "`e"
-		local bel = "`a"
-		local win_signal = esc .. "]1337;SetUserVar=wezmuxbar_switcher=MQ==" .. bel
+	local fzf_opts = "--print-query"
+		.. " --header='Switch workspace · type new name to create'"
+		.. " --prompt='  Workspace: '"
+		.. " --pointer='▶'"
+		.. " --border=rounded"
+		.. " --no-info"
 
-		local cmd = "Get-Content '"
+	if is_windows then
+		local win_signal = "`e]1337;SetUserVar=wezmuxbar_switcher=MQ==`a"
+
+		local cmd = "$sel = Get-Content '"
 			.. ws_file
-			.. "' | fzf"
-			.. " --print-query"
-			.. " --header='Switch workspace - type new name to create'"
-			.. " --prompt='  Workspace: '"
-			.. " --pointer='▶'"
-			.. " --border=rounded"
-			.. " --no-info"
-			.. " | Set-Content '"
+			.. "' | fzf "
+			.. fzf_opts
+			.. "; $sel | Set-Content '"
 			.. result_file
 			.. "';"
 			.. " Write-Host -NoNewLine '"
@@ -90,18 +90,14 @@ local function build_fzf_args(ws_file)
 
 		return { "powershell", "-NoProfile", "-Command", cmd }
 	else
-		local cmd = "cat '"
+		local cmd = "SEL=$(cat '"
 			.. ws_file
-			.. "' | fzf"
-			.. " --print-query"
-			.. " --header='Switch workspace · type new name to create'"
-			.. " --prompt='  Workspace: '"
-			.. " --pointer='▶'"
-			.. " --border=rounded"
-			.. " --no-info"
-			.. " > '"
+			.. "' | fzf "
+			.. fzf_opts
+			.. ") || true;"
+			.. " echo \"$SEL\" > '"
 			.. result_file
-			.. "' 2>/dev/tty || true;"
+			.. "';"
 			.. " printf '"
 			.. signal
 			.. "';"
