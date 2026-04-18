@@ -3,45 +3,149 @@ local switcher_config = require("wezmuxbar.switcher.config")
 
 local M = {}
 
---- Resolves the absolute path to the switcher shell script.
---- @return string path to switcher.sh
-local function get_script_path()
-	local is_windows = string.match(wezterm.target_triple, "windows") ~= nil
-	local sep = is_windows and "\\" or "/"
-	local plugin_dir = wezterm.plugin.list()[1].plugin_dir:gsub(sep .. "[^" .. sep .. "]*$", "")
+local is_windows = string.match(wezterm.target_triple, "windows") ~= nil
+local sep = is_windows and "\\" or "/"
+local tmp_dir = is_windows and (os.getenv("TEMP") or "C:\\Temp") or "/tmp"
+local base_dir = tmp_dir .. sep .. "wezmuxbar-switcher"
 
-	local function directory_exists(path)
-		local success, _ = pcall(wezterm.read_dir, plugin_dir .. path)
-		return success
+--- Collects unique workspace names from the mux.
+--- @return string[] List of unique workspace names
+local function collect_workspaces()
+	local workspace_set = {}
+	local workspaces = {}
+
+	for _, name in ipairs(wezterm.mux.get_workspace_names()) do
+		if not workspace_set[name] then
+			workspace_set[name] = true
+			table.insert(workspaces, name)
+		end
 	end
 
-	local path1 = "httpssCssZssZsgithubsDscomsZsabelfubusZswezmuxbar"
-	local path2 = "httpssCssZssZsgithubsDscomsZsabelfubusZswezmuxbarZs"
-	local require_path = directory_exists(path2) and path2 or path1
+	return workspaces
+end
 
-	return plugin_dir
-		.. sep
-		.. require_path
-		.. sep
-		.. "plugin"
-		.. sep
-		.. "wezmuxbar"
-		.. sep
-		.. "switcher"
-		.. sep
-		.. "switcher.sh"
+--- Writes workspace list to a temp file for fzf.
+--- @param workspaces string[] Workspace names
+--- @return string workspaces_file Path to workspaces list file
+local function write_temp_data(workspaces)
+	os.execute((is_windows and "mkdir " or "mkdir -p ") .. '"' .. base_dir .. '"')
+
+	local ws_file = base_dir .. sep .. "workspaces.txt"
+	local f = io.open(ws_file, "w")
+	if f then
+		f:write("+ Create new workspace\n")
+		for _, ws in ipairs(workspaces) do
+			f:write(ws .. "\n")
+		end
+		f:close()
+	end
+
+	return ws_file
+end
+
+--- Returns the current pane's working directory.
+--- @param pane table Wezterm pane object
+--- @return string cwd
+local function get_current_cwd(pane)
+	local ok, url = pcall(function()
+		return pane:get_current_working_dir()
+	end)
+	if ok and url then
+		return url.file_path or tostring(url)
+	end
+	return ""
+end
+
+--- Builds the fzf spawn arguments for the current platform.
+--- @param ws_file string Path to workspaces list file
+--- @return table args for SpawnCommandInNewTab
+local function build_fzf_args(ws_file)
+	local result_file = base_dir .. sep .. "result.txt"
+
+	if is_windows then
+		local cmd = "Get-Content '"
+			.. ws_file
+			.. "' | fzf"
+			.. " --print-query"
+			.. " --header='Switch workspace - type new name to create'"
+			.. " --prompt='  Workspace: '"
+			.. " --pointer='▶'"
+			.. " --border=rounded"
+			.. " --no-info"
+			.. " | Set-Content '"
+			.. result_file
+			.. "'"
+
+		return { "powershell", "-NoProfile", "-Command", cmd }
+	else
+		local cmd = "cat '"
+			.. ws_file
+			.. "' | fzf"
+			.. " --print-query"
+			.. " --header='Switch workspace · type new name to create'"
+			.. " --prompt='  Workspace: '"
+			.. " --pointer='▶'"
+			.. " --border=rounded"
+			.. " --no-info"
+			.. " > '"
+			.. result_file
+			.. "' || true"
+
+		return { "bash", "-c", cmd }
+	end
+end
+
+--- Parses the fzf result file and returns the action and target workspace.
+--- @param workspaces string[] Known workspace names
+--- @return string|nil action "switch" or "create"
+--- @return string|nil target Workspace name
+local function parse_result(workspaces)
+	local result_file = base_dir .. sep .. "result.txt"
+	local f = io.open(result_file, "r")
+	if not f then
+		return nil, nil
+	end
+
+	local lines = {}
+	for line in f:lines() do
+		table.insert(lines, line)
+	end
+	f:close()
+	os.remove(result_file)
+
+	local query = lines[1] or ""
+	local match = lines[2] or ""
+
+	if match == "+ Create new workspace" then
+		if query ~= "" and query ~= "+ Create new workspace" then
+			return "create", query
+		end
+		return nil, nil
+	elseif match ~= "" then
+		return "switch", match
+	elseif query ~= "" then
+		local workspace_set = {}
+		for _, ws in ipairs(workspaces) do
+			workspace_set[ws] = true
+		end
+		if workspace_set[query] then
+			return "switch", query
+		else
+			return "create", query
+		end
+	end
+
+	return nil, nil
 end
 
 --- Sets up the workspace switcher.
---- Registers keybindings and the user-var-changed event handler.
+--- Registers keybindings and watches for fzf results on pane exit.
 --- @param config table Wezterm config object
 --- @param opts table|nil Optional overrides for default keybinding (key, mods)
 function M.setup(config, opts)
 	local utils = require("wezmuxbar.utils")
 	local merged = utils.deep_merge(switcher_config.defaults, opts or {})
-	local script_path = get_script_path()
 
-	-- Register keybinding
 	if not config.keys then
 		config.keys = {}
 	end
@@ -49,39 +153,66 @@ function M.setup(config, opts)
 	table.insert(config.keys, {
 		key = merged.key,
 		mods = merged.mods,
-		action = wezterm.action.SpawnCommandInNewTab({
-			args = { "/bin/zsh", "-l", "-c", "bash '" .. script_path .. "'" },
-		}),
+		action = wezterm.action_callback(function(window, pane)
+			local workspaces = collect_workspaces()
+			local ws_file = write_temp_data(workspaces)
+			local cwd = get_current_cwd(pane)
+			local fzf_args = build_fzf_args(ws_file)
+
+			-- Store cwd for new workspace creation
+			local cwd_file = base_dir .. sep .. "cwd.txt"
+			local f = io.open(cwd_file, "w")
+			if f then
+				f:write(cwd)
+				f:close()
+			end
+
+			window:perform_action(
+				wezterm.action.SpawnCommandInNewTab({
+					args = fzf_args,
+				}),
+				pane
+			)
+		end),
 	})
 
-	-- Listen for the switcher's user-var signal to perform workspace switch
-	wezterm.on("user-var-changed", function(window, pane, name, value)
-		if name ~= "wezmuxbar_switcher" then
+	-- Watch for switcher result when fzf pane closes
+	wezterm.on("pane-exited", function(window, pane)
+		local result_file = base_dir .. sep .. "result.txt"
+		local f = io.open(result_file, "r")
+		if not f then
+			return
+		end
+		f:close()
+
+		local workspaces = collect_workspaces()
+		local action, target = parse_result(workspaces)
+
+		if not action or not target then
 			return
 		end
 
-		-- value is already base64-decoded by wezterm
-		-- Format: "action|workspace_name|cwd"
-		local parts = {}
-		for part in value:gmatch("[^|]+") do
-			table.insert(parts, part)
+		-- Read stored cwd
+		local cwd = ""
+		local cwd_file = base_dir .. sep .. "cwd.txt"
+		local cf = io.open(cwd_file, "r")
+		if cf then
+			cwd = cf:read("*a") or ""
+			cf:close()
+			os.remove(cwd_file)
 		end
-
-		local action = parts[1]
-		local workspace = parts[2]
-		local cwd = parts[3] or ""
 
 		if action == "create" then
 			window:perform_action(
 				wezterm.action.SwitchToWorkspace({
-					name = workspace,
+					name = target,
 					spawn = { cwd = cwd },
 				}),
 				pane
 			)
 		else
 			window:perform_action(
-				wezterm.action.SwitchToWorkspace({ name = workspace }),
+				wezterm.action.SwitchToWorkspace({ name = target }),
 				pane
 			)
 		end
