@@ -50,7 +50,7 @@ function M.setup(config, opts)
 		key = merged.key,
 		mods = merged.mods,
 		action = wezterm.action.SpawnCommandInNewTab({
-			args = { "bash", script_path },
+			args = { "/bin/zsh", "-l", "-c", "bash '" .. script_path .. "'" },
 		}),
 	})
 

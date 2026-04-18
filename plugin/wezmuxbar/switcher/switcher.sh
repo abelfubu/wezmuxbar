@@ -1,6 +1,5 @@
 #!/bin/bash
 # switcher.sh - Wezterm workspace switcher with fzf
-set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -12,8 +11,8 @@ if [ -z "$DATA" ]; then
 	exit 1
 fi
 
-# Get current pane's CWD for new workspace creation
-CURRENT_CWD=$(echo "$DATA" | jq -r '[.[] | select(.is_active)] | first | .cwd // empty' 2>/dev/null | head -1)
+# Get current pane's CWD for new workspace creation (strip file:// prefix)
+CURRENT_CWD=$(echo "$DATA" | jq -r '[.[] | select(.is_active)] | first | .cwd // empty' 2>/dev/null | head -1 | sed 's|^file://||')
 if [ -z "$CURRENT_CWD" ]; then
 	CURRENT_CWD="$HOME"
 fi
