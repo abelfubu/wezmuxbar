@@ -156,7 +156,7 @@ function M.add_mux_bar(config, options)
 		for _, value in
 			ipairs(components.right_widget({
 				text = window:active_workspace(),
-				fg = colors.brights[6],
+				fg = colors.brights[2],
 				bg = colors.background,
 				icon = wezterm.nerdfonts.cod_window,
 			}))
