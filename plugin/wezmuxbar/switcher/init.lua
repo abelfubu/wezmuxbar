@@ -7,6 +7,8 @@ local is_windows = string.match(wezterm.target_triple, "windows") ~= nil
 local sep = is_windows and "\\" or "/"
 local tmp_dir = is_windows and (os.getenv("TEMP") or "C:\\Temp") or "/tmp"
 local base_dir = tmp_dir .. sep .. "wezmuxbar-switcher"
+local result_file = base_dir .. sep .. "result.txt"
+local cwd_file = base_dir .. sep .. "cwd.txt"
 
 --- Collects unique workspace names from the mux.
 --- @return string[] List of unique workspace names
@@ -57,12 +59,18 @@ local function get_current_cwd(pane)
 end
 
 --- Builds the fzf spawn arguments for the current platform.
+--- After fzf exits, sends a user-var signal so Lua can process the result.
 --- @param ws_file string Path to workspaces list file
 --- @return table args for SpawnCommandInNewTab
 local function build_fzf_args(ws_file)
-	local result_file = base_dir .. sep .. "result.txt"
+	-- MQ== is base64 for "1" — hardcoded to avoid platform-specific base64 commands
+	local signal = "\\033]1337;SetUserVar=wezmuxbar_switcher=MQ==\\007"
 
 	if is_windows then
+		local esc = "`e"
+		local bel = "`a"
+		local win_signal = esc .. "]1337;SetUserVar=wezmuxbar_switcher=MQ==" .. bel
+
 		local cmd = "Get-Content '"
 			.. ws_file
 			.. "' | fzf"
@@ -74,7 +82,11 @@ local function build_fzf_args(ws_file)
 			.. " --no-info"
 			.. " | Set-Content '"
 			.. result_file
-			.. "'"
+			.. "';"
+			.. " Write-Host -NoNewLine '"
+			.. win_signal
+			.. "';"
+			.. " Start-Sleep -Milliseconds 200"
 
 		return { "powershell", "-NoProfile", "-Command", cmd }
 	else
@@ -89,7 +101,11 @@ local function build_fzf_args(ws_file)
 			.. " --no-info"
 			.. " > '"
 			.. result_file
-			.. "' || true"
+			.. "' 2>/dev/tty || true;"
+			.. " printf '"
+			.. signal
+			.. "';"
+			.. " sleep 0.2"
 
 		return { "bash", "-c", cmd }
 	end
@@ -100,7 +116,6 @@ end
 --- @return string|nil action "switch" or "create"
 --- @return string|nil target Workspace name
 local function parse_result(workspaces)
-	local result_file = base_dir .. sep .. "result.txt"
 	local f = io.open(result_file, "r")
 	if not f then
 		return nil, nil
@@ -139,7 +154,7 @@ local function parse_result(workspaces)
 end
 
 --- Sets up the workspace switcher.
---- Registers keybindings and watches for fzf results on pane exit.
+--- Registers keybindings and listens for the user-var signal from fzf.
 --- @param config table Wezterm config object
 --- @param opts table|nil Optional overrides for default keybinding (key, mods)
 function M.setup(config, opts)
@@ -160,7 +175,6 @@ function M.setup(config, opts)
 			local fzf_args = build_fzf_args(ws_file)
 
 			-- Store cwd for new workspace creation
-			local cwd_file = base_dir .. sep .. "cwd.txt"
 			local f = io.open(cwd_file, "w")
 			if f then
 				f:write(cwd)
@@ -176,14 +190,11 @@ function M.setup(config, opts)
 		end),
 	})
 
-	-- Watch for switcher result when fzf pane closes
-	wezterm.on("pane-exited", function(window, pane)
-		local result_file = base_dir .. sep .. "result.txt"
-		local f = io.open(result_file, "r")
-		if not f then
+	-- Listen for the signal from fzf to process the result
+	wezterm.on("user-var-changed", function(window, pane, name, value)
+		if name ~= "wezmuxbar_switcher" then
 			return
 		end
-		f:close()
 
 		local workspaces = collect_workspaces()
 		local action, target = parse_result(workspaces)
@@ -194,7 +205,6 @@ function M.setup(config, opts)
 
 		-- Read stored cwd
 		local cwd = ""
-		local cwd_file = base_dir .. sep .. "cwd.txt"
 		local cf = io.open(cwd_file, "r")
 		if cf then
 			cwd = cf:read("*a") or ""
