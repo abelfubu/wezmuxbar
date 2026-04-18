@@ -26,7 +26,7 @@ local function collect_workspaces()
 	return workspaces
 end
 
---- Writes workspace list to a temp file for tv.
+--- Writes workspace list to a temp file for fzf.
 --- @param workspaces string[] Workspace names
 --- @return string workspaces_file Path to workspaces list file
 local function write_temp_data(workspaces)
@@ -35,6 +35,7 @@ local function write_temp_data(workspaces)
 	local ws_file = base_dir .. sep .. "workspaces.txt"
 	local f = io.open(ws_file, "w")
 	if f then
+		f:write("+ Create new workspace\n")
 		for _, ws in ipairs(workspaces) do
 			f:write(ws .. "\n")
 		end
@@ -58,21 +59,24 @@ local function get_current_cwd(pane)
 end
 
 --- Writes a temp runner script and returns spawn args.
---- Uses tv with --ui-scale for centered display and --expect ctrl-n for create.
 --- @param ws_file string Path to workspaces list file
---- @return table args for SplitPane command
-local function build_tv_args(ws_file)
+--- @return table args for SpawnCommandInNewTab
+local function build_fzf_args(ws_file)
 	if is_windows then
 		local script = base_dir .. sep .. "run.ps1"
 		local f = io.open(script, "w")
 		if f then
-			f:write("$sel = tv")
-			f:write(" --source-command \"Get-Content '" .. ws_file .. "'\"")
-			f:write(" --no-preview")
-			f:write(" --no-remote")
-			f:write(" --ui-scale 50")
-			f:write(" --input-header 'Switch workspace'")
-			f:write(" --expect 'ctrl-n'")
+			f:write("$sel = Get-Content '" .. ws_file .. "' | fzf")
+			f:write(" --print-query")
+			f:write(" --layout=reverse")
+			f:write(" --height=50%")
+			f:write(" --margin=25%,25%")
+			f:write(" --padding=1")
+			f:write(" --border=rounded")
+			f:write(" --border-label=' Switch workspace '")
+			f:write(" --no-info")
+			f:write(" --prompt='  '")
+			f:write(" --pointer='▶'")
 			f:write("\n")
 			f:write("$sel | Set-Content '" .. result_file .. "'\n")
 			f:write("Write-Host -NoNewLine \"`e]1337;SetUserVar=wezmuxbar_switcher=MQ==`a\"\n")
@@ -86,13 +90,17 @@ local function build_tv_args(ws_file)
 		if f then
 			f:write("#!/bin/bash\n")
 			f:write("export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\n")
-			f:write("SEL=$(tv")
-			f:write(" --source-command \"cat '" .. ws_file .. "'\"")
-			f:write(" --no-preview")
-			f:write(" --no-remote")
-			f:write(" --ui-scale 50")
-			f:write(" --input-header 'Switch workspace'")
-			f:write(" --expect 'ctrl-n'")
+			f:write("SEL=$(cat '" .. ws_file .. "' | fzf")
+			f:write(" --print-query")
+			f:write(" --layout=reverse")
+			f:write(" --height=50%")
+			f:write(" --margin=25%,25%")
+			f:write(" --padding=1")
+			f:write(" --border=rounded")
+			f:write(" --border-label=' Switch workspace '")
+			f:write(" --no-info")
+			f:write(" --prompt='  '")
+			f:write(" --pointer='▶'")
 			f:write(")\n")
 			f:write("echo \"$SEL\" > '" .. result_file .. "'\n")
 			f:write("printf '\\033]1337;SetUserVar=wezmuxbar_switcher=MQ==\\007'\n")
@@ -104,10 +112,10 @@ local function build_tv_args(ws_file)
 	end
 end
 
---- Parses the tv result file and returns the action and target workspace.
---- tv with --expect outputs: line 1 = key pressed, line 2 = selected entry
+--- Parses the fzf result file and returns the action and target workspace.
+--- fzf with --print-query outputs: line 1 = typed query, line 2 = selected entry
 --- @param workspaces string[] Known workspace names
---- @return string|nil action "switch", "create", or nil
+--- @return string|nil action "switch", "create", "prompt_create", or nil
 --- @return string|nil target Workspace name or nil
 local function parse_result(workspaces)
 	local f = io.open(result_file, "r")
@@ -122,34 +130,37 @@ local function parse_result(workspaces)
 	f:close()
 	os.remove(result_file)
 
-	-- With --expect, tv outputs:
-	-- Line 1: the key used to confirm (e.g., "enter" or "ctrl-n")
-	-- Line 2: the selected entry
-	local key = lines[1] or ""
-	local selection = lines[2] or ""
+	local query = lines[1] or ""
+	local match = lines[2] or ""
 
-	if key == "ctrl-n" then
+	-- Selected "+ Create new workspace" entry
+	if match == "+ Create new workspace" then
 		return "prompt_create", nil
 	end
 
-	if selection == "" then
-		return nil, nil
+	-- Selected an existing workspace
+	if match ~= "" then
+		return "switch", match
 	end
 
-	local workspace_set = {}
-	for _, ws in ipairs(workspaces) do
-		workspace_set[ws] = true
-	end
-
-	if workspace_set[selection] then
-		return "switch", selection
+	-- Typed a name with no match — check if it's existing or new
+	if query ~= "" then
+		local workspace_set = {}
+		for _, ws in ipairs(workspaces) do
+			workspace_set[ws] = true
+		end
+		if workspace_set[query] then
+			return "switch", query
+		else
+			return "create", query
+		end
 	end
 
 	return nil, nil
 end
 
 --- Sets up the workspace switcher.
---- Registers keybindings and listens for the user-var signal from tv.
+--- Registers keybindings and listens for the user-var signal from fzf.
 --- @param config table Wezterm config object
 --- @param opts table|nil Optional overrides for default keybinding (key, mods)
 function M.setup(config, opts)
@@ -167,7 +178,7 @@ function M.setup(config, opts)
 			local workspaces = collect_workspaces()
 			local ws_file = write_temp_data(workspaces)
 			local cwd = get_current_cwd(pane)
-			local tv_args = build_tv_args(ws_file)
+			local fzf_args = build_fzf_args(ws_file)
 
 			-- Store cwd for new workspace creation
 			local f = io.open(cwd_file, "w")
@@ -178,14 +189,14 @@ function M.setup(config, opts)
 
 			window:perform_action(
 				wezterm.action.SpawnCommandInNewTab({
-					args = tv_args,
+					args = fzf_args,
 				}),
 				pane
 			)
 		end),
 	})
 
-	-- Listen for the signal from tv to process the result
+	-- Listen for the signal from fzf to process the result
 	wezterm.on("user-var-changed", function(window, pane, name, value)
 		if name ~= "wezmuxbar_switcher" then
 			return
@@ -208,7 +219,6 @@ function M.setup(config, opts)
 		end
 
 		if action == "prompt_create" then
-			-- Use wezterm's native input prompt for new workspace name
 			window:perform_action(
 				wezterm.action.PromptInputLine({
 					description = "Enter new workspace name:",
@@ -226,17 +236,17 @@ function M.setup(config, opts)
 				}),
 				pane
 			)
-		elseif action == "switch" then
-			window:perform_action(
-				wezterm.action.SwitchToWorkspace({ name = target }),
-				pane
-			)
 		elseif action == "create" then
 			window:perform_action(
 				wezterm.action.SwitchToWorkspace({
 					name = target,
 					spawn = { cwd = cwd },
 				}),
+				pane
+			)
+		elseif action == "switch" then
+			window:perform_action(
+				wezterm.action.SwitchToWorkspace({ name = target }),
 				pane
 			)
 		end
