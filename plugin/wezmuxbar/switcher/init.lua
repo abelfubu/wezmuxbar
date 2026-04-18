@@ -58,52 +58,49 @@ local function get_current_cwd(pane)
 	return ""
 end
 
---- Builds the fzf spawn arguments for the current platform.
---- After fzf exits, sends a user-var signal so Lua can process the result.
+--- Writes a temp runner script and returns spawn args.
+--- This avoids all escaping issues with bash -c.
 --- @param ws_file string Path to workspaces list file
 --- @return table args for SpawnCommandInNewTab
 local function build_fzf_args(ws_file)
-	-- MQ== is base64 for "1" — hardcoded to avoid platform-specific base64 commands
-	local signal = "\\033]1337;SetUserVar=wezmuxbar_switcher=MQ==\\007"
-
-	local fzf_opts = "--print-query"
-		.. " --header='Switch workspace · type new name to create'"
-		.. " --prompt='  Workspace: '"
-		.. " --pointer='▶'"
-		.. " --border=rounded"
-		.. " --no-info"
-
 	if is_windows then
-		local win_signal = "`e]1337;SetUserVar=wezmuxbar_switcher=MQ==`a"
-
-		local cmd = "$sel = Get-Content '"
-			.. ws_file
-			.. "' | fzf "
-			.. fzf_opts
-			.. "; $sel | Set-Content '"
-			.. result_file
-			.. "';"
-			.. " Write-Host -NoNewLine '"
-			.. win_signal
-			.. "';"
-			.. " Start-Sleep -Milliseconds 200"
-
-		return { "powershell", "-NoProfile", "-Command", cmd }
+		local script = base_dir .. sep .. "run.ps1"
+		local f = io.open(script, "w")
+		if f then
+			f:write("$sel = Get-Content '" .. ws_file .. "' | fzf")
+			f:write(" --print-query")
+			f:write(" --header='Switch workspace - type new name to create'")
+			f:write(" --prompt='  Workspace: '")
+			f:write(" --pointer='>'")
+			f:write(" --border=rounded")
+			f:write(" --no-info\n")
+			f:write("$sel | Set-Content '" .. result_file .. "'\n")
+			f:write("Write-Host -NoNewLine \"`e]1337;SetUserVar=wezmuxbar_switcher=MQ==`a\"\n")
+			f:write("Start-Sleep -Milliseconds 200\n")
+			f:close()
+		end
+		return { "powershell", "-NoProfile", "-File", script }
 	else
-		local cmd = "SEL=$(cat '"
-			.. ws_file
-			.. "' | fzf "
-			.. fzf_opts
-			.. ") || true;"
-			.. " echo \"$SEL\" > '"
-			.. result_file
-			.. "';"
-			.. " printf '"
-			.. signal
-			.. "';"
-			.. " sleep 0.2"
-
-		return { "bash", "-c", cmd }
+		local script = base_dir .. sep .. "run.sh"
+		local f = io.open(script, "w")
+		if f then
+			f:write("#!/bin/bash\n")
+			f:write("export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\"\n")
+			f:write("SEL=$(cat '" .. ws_file .. "' | fzf")
+			f:write(" --print-query")
+			f:write(" --header='Switch workspace · type new name to create'")
+			f:write(" --prompt='  Workspace: '")
+			f:write(" --pointer='▶'")
+			f:write(" --border=rounded")
+			f:write(" --no-info")
+			f:write(")\n")
+			f:write("echo \"$SEL\" > '" .. result_file .. "'\n")
+			f:write("printf '\\033]1337;SetUserVar=wezmuxbar_switcher=MQ==\\007'\n")
+			f:write("sleep 0.2\n")
+			f:close()
+			os.execute("chmod +x '" .. script .. "'")
+		end
+		return { script }
 	end
 end
 
