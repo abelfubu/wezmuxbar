@@ -109,12 +109,11 @@ function M.add_mux_bar(config, options)
 			table.insert(left_elements, value)
 		end
 
-		-- Add workspace name after leader indicator
-		for _, value in ipairs(components.right_widget({
+		-- Add workspace name after leader indicator (square style, no icon, inverted colors)
+		for _, value in ipairs(components.square_workspace({
 			text = window:active_workspace(),
 			fg = colors.brights[2],
 			bg = colors.background,
-			icon = wezterm.nerdfonts.cod_window,
 		}))
 		do
 			table.insert(left_elements, value)

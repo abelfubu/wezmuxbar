@@ -71,4 +71,15 @@ function M.inactive_tab(config)
 	}
 end
 
+--- Create a square workspace widget without icon and with inverted colors.
+--- @param config TabConfig Workspace status configuration
+--- @return table[] Formatted workspace status widget elements
+function M.square_workspace(config)
+	return {
+		{ Background = { Color = config.fg } }, -- Inverted: bg becomes fg
+		{ Foreground = { Color = config.bg } }, -- Inverted: fg becomes bg
+		{ Text = " " .. config.text .. " " }, -- No icon
+	}
+end
+
 return M
