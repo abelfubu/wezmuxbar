@@ -97,11 +97,30 @@ function M.add_mux_bar(config, options)
 	wezterm.on("update-right-status", function(window, pane)
 		local leader_active = window:leader_is_active()
 
-		window:set_left_status(wezterm.format(components.leader_status({
+		local left_elements = {}
+
+		-- Add leader indicator
+		for _, value in ipairs(components.leader_status({
 			fg = colors.brights[3],
 			bg = colors.background,
 			icon = leader_active and "   " or "   ",
-		})))
+		}))
+		do
+			table.insert(left_elements, value)
+		end
+
+		-- Add workspace name after leader indicator
+		for _, value in ipairs(components.right_widget({
+			text = window:active_workspace(),
+			fg = colors.brights[2],
+			bg = colors.background,
+			icon = wezterm.nerdfonts.cod_window,
+		}))
+		do
+			table.insert(left_elements, value)
+		end
+
+		window:set_left_status(wezterm.format(left_elements))
 
 		local right_elements = {}
 
@@ -151,17 +170,6 @@ function M.add_mux_bar(config, options)
 			do
 				table.insert(right_elements, value)
 			end
-		end
-
-		for _, value in
-			ipairs(components.right_widget({
-				text = window:active_workspace(),
-				fg = colors.brights[2],
-				bg = colors.background,
-				icon = wezterm.nerdfonts.cod_window,
-			}))
-		do
-			table.insert(right_elements, value)
 		end
 
 		window:set_right_status(wezterm.format(right_elements))
